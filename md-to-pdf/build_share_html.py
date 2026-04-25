@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import base64
 import html
 import mimetypes
@@ -10,10 +11,8 @@ import tempfile
 from pathlib import Path
 
 
-BASE_DIR = Path(__file__).resolve().parent
-SOURCE_FILE = BASE_DIR / "marc.md"
-TARGET_HTML_FILE = BASE_DIR / "marc-share.html"
-TARGET_PDF_FILE = BASE_DIR / "marc-share.pdf"
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_SOURCE_FILE = SCRIPT_DIR / "marc.md"
 
 BROWSER_CANDIDATES = [
   Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
@@ -51,8 +50,8 @@ def render_inline(text):
     return "".join(rendered)
 
 
-def image_data_uri(relative_path):
-    image_path = (BASE_DIR / relative_path).resolve()
+def image_data_uri(document_dir, relative_path):
+    image_path = (document_dir / relative_path).resolve()
     mime_type, _ = mimetypes.guess_type(str(image_path))
     if not mime_type:
         mime_type = "application/octet-stream"
@@ -77,15 +76,15 @@ def code_block_html(code_lines):
     return "<pre><code>{}</code></pre>".format(html.escape("\n".join(code_lines)))
 
 
-def image_html(alt_text, relative_path):
-    data_uri = image_data_uri(relative_path)
-    return '<p class="image"><img alt="{}" src="{}"></p>'.format(
-        html.escape(alt_text, quote=True),
-        data_uri,
-    )
+def image_html(document_dir, alt_text, relative_path):
+  data_uri = image_data_uri(document_dir, relative_path)
+  return '<p class="image"><img alt="{}" src="{}"></p>'.format(
+    html.escape(alt_text, quote=True),
+    data_uri,
+  )
 
 
-def render_markdown(lines):
+def render_markdown(lines, document_dir):
     output = []
     paragraph_lines = []
     unordered_items = []
@@ -148,7 +147,9 @@ def render_markdown(lines):
         image_match = IMAGE_RE.match(stripped)
         if image_match:
             flush_all_text()
-            output.append(image_html(image_match.group(1), image_match.group(2)))
+            output.append(
+                image_html(document_dir, image_match.group(1), image_match.group(2))
+            )
             continue
 
         unordered_match = UNORDERED_RE.match(stripped)
@@ -326,16 +327,57 @@ def build_pdf(html_file, pdf_file):
     subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
+def parse_args():
+  parser = argparse.ArgumentParser(
+    description="将 Markdown 分析文档导出为可分享的 HTML 和 PDF。"
+  )
+  parser.add_argument(
+    "source",
+    nargs="?",
+    default=str(DEFAULT_SOURCE_FILE),
+    help="输入 Markdown 文档路径，默认使用当前目录下的 marc.md",
+  )
+  parser.add_argument(
+    "--html-output",
+    help="输出 HTML 路径，默认与输入文档同目录，文件名为 <文档名>-share.html",
+  )
+  parser.add_argument(
+    "--pdf-output",
+    help="输出 PDF 路径，默认与输入文档同目录，文件名为 <文档名>-share.pdf",
+  )
+  return parser.parse_args()
+
+
+def resolve_paths(args):
+  source_file = Path(args.source).expanduser().resolve()
+  if not source_file.is_file():
+    raise RuntimeError("Input markdown file not found: {}".format(source_file))
+
+  html_output = (
+    Path(args.html_output).expanduser().resolve()
+    if args.html_output
+    else source_file.with_name("{}-share.html".format(source_file.stem))
+  )
+  pdf_output = (
+    Path(args.pdf_output).expanduser().resolve()
+    if args.pdf_output
+    else source_file.with_name("{}-share.pdf".format(source_file.stem))
+  )
+  return source_file, html_output, pdf_output
+
+
 def main():
-  lines = SOURCE_FILE.read_text(encoding="utf-8").splitlines()
+  args = parse_args()
+  source_file, target_html_file, target_pdf_file = resolve_paths(args)
+  lines = source_file.read_text(encoding="utf-8").splitlines()
   title = "marc 功能"
   if lines and lines[0].startswith("# "):
     title = lines[0][2:].strip()
-  document_html = render_markdown(lines)
-  TARGET_HTML_FILE.write_text(build_html(document_html, title), encoding="utf-8")
-  build_pdf(TARGET_HTML_FILE, TARGET_PDF_FILE)
-  print("Generated {}".format(TARGET_HTML_FILE))
-  print("Generated {}".format(TARGET_PDF_FILE))
+  document_html = render_markdown(lines, source_file.parent)
+  target_html_file.write_text(build_html(document_html, title), encoding="utf-8")
+  build_pdf(target_html_file, target_pdf_file)
+  print("Generated {}".format(target_html_file))
+  print("Generated {}".format(target_pdf_file))
 
 
 if __name__ == "__main__":
