@@ -1,0 +1,35 @@
+{
+  "skill_name": "code-to-prd",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "帮我更新一下 Listen_and_Number_v2 的 ui.md，看看 EXML 有没有变化",
+      "expected_output": "只读取 EXML 皮肤文件和 default.thm.json，不读 controller/data 代码。输出 ui.md 的变更内容（或告知内容无变化），并附一行变更摘要。",
+      "files": [
+        "/Users/limin/work/tamic-egret/PRD/KJ_AP_LN_v2/ui.md",
+        "/Users/limin/work/tamic-egret/resource/assets/template/Listen_and_Number_v2/eui_skin/"
+      ],
+      "assertions": []
+    },
+    {
+      "id": 1,
+      "prompt": "重新提取一下 Listen_and_Number_v2 的 data.md，检查数据契约有没有漏字段",
+      "expected_output": "只读取 controller / DataManager 相关 TypeScript 代码，不读 EXML 文件。输出 data.md 的变更内容（或告知无变化），并附一行变更摘要。",
+      "files": [
+        "/Users/limin/work/tamic-egret/PRD/KJ_AP_LN_v2/data.md",
+        "/Users/limin/work/tamic-egret/src/template/"
+      ],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "prompt": "帮我分析 Listen_and_Number_v2 模板，产出完整 PRD",
+      "expected_output": "走完整 Workflow 步骤 1-6，产出所有 PRD 章节（证据清单、数据契约、UI 布局、交互逻辑、功能逻辑等）。不触发局部分析模式，不限制读取文件类型。",
+      "files": [
+        "/Users/limin/work/tamic-egret/src/template/",
+        "/Users/limin/work/tamic-egret/resource/assets/template/Listen_and_Number_v2/"
+      ],
+      "assertions": []
+    }
+  ]
+}
